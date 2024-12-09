@@ -581,6 +581,11 @@ def match_instruments_with_function(
 
     all_questions: List[Question] = []
     for instrument in instruments:
+        # assign instrument ids to questions
+        for question in instrument.questions:
+            if question.instrument_id is None:
+                question.instrument_id = instrument.instrument_id
+            
         all_questions.extend(instrument.questions)
 
     text_vectors, new_vectors_dict = create_full_text_vectors(

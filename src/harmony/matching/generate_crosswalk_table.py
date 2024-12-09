@@ -26,7 +26,7 @@ SOFTWARE.
 
 import pandas as pd
 
-def generate_crosswalk_table(all_questions, similarity, threshold):
+def generate_crosswalk_table(all_questions, similarity, threshold, within_instrument_matches=True):
     matching_pairs = []
 
     # iterate through all pairs of questions
@@ -34,15 +34,17 @@ def generate_crosswalk_table(all_questions, similarity, threshold):
         for j, q2 in enumerate(all_questions):
             # check for non-dupe and similarity above inputted threshold
             if j > i and similarity[i, j] > threshold:
-                # add to list of matches
-                matching_pairs.append({
-                    'pair_name': f"{i}_{j}",
-                    'question1_no': q1.question_no,
-                    'question1_text': q1.question_text,
-                    'question2_no': q2.question_no,
-                    'question2_text': q2.question_text,
-                    'match_score': similarity[i, j]
-                })
+                # if within_instrument_matches is false, only add entries that are from different instruments
+                if within_instrument_matches or (not within_instrument_matches and q1.instrument_id != q2.instrument_id):
+                    # add to list of matches
+                    matching_pairs.append({
+                        'pair_name': f"{i}_{j}",
+                        'question1_no': q1.question_no,
+                        'question1_text': q1.question_text,
+                        'question2_no': q2.question_no,
+                        'question2_text': q2.question_text,
+                        'match_score': similarity[i, j]
+                    })
 
     # convert list to dataframe
     return pd.DataFrame(matching_pairs)
