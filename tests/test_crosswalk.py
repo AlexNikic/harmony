@@ -58,9 +58,11 @@ class TestGenerateCrosswalkTable(unittest.TestCase):
 
         self.threshold = 0.6
 
+        self.within_instrument_matches = True
+
 
     def test_generate_crosswalk_table_dummy_data(self):
-        result = generate_crosswalk_table(self.instruments_dummy.questions, self.similarity, self.threshold)
+        result = generate_crosswalk_table(self.instruments_dummy.questions, self.similarity, self.threshold, self.within_instrument_matches)
 
         expected_matches = [
             {"pair_name": "0_1", "question1_no": "1", "question1_text": "potato",
@@ -69,7 +71,7 @@ class TestGenerateCrosswalkTable(unittest.TestCase):
              "question2_no": "3", "question2_text": "radish", "match_score": 0.9},
             {"pair_name": "1_2", "question1_no": "2", "question1_text": "tomato",
              "question2_no": "3", "question2_text": "radish", "match_score": 0.8},
-        ]
+        ] if self.within_instrument_matches else []
 
         for _, row in pd.DataFrame(expected_matches).iterrows():
             self.assertTrue(any(row.equals(result_row) for _, result_row in result.iterrows()))
@@ -78,12 +80,12 @@ class TestGenerateCrosswalkTable(unittest.TestCase):
 
     def test_generate_crosswalk_table_empty(self):
         empty_similarity = np.eye(3)  # Identity matrix, no matches above threshold
-        result = generate_crosswalk_table(self.all_questions_dummy, empty_similarity, self.threshold)
+        result = generate_crosswalk_table(self.all_questions_dummy, empty_similarity, self.threshold, self.within_instrument_matches)
         self.assertTrue(result.empty)
 
     def test_generate_crosswalk_table_real(self):
         all_questions, similarity_with_polarity, _, _ = match_instruments([self.instruments])
-        result = generate_crosswalk_table(all_questions, similarity_with_polarity, self.threshold)
+        result = generate_crosswalk_table(all_questions, similarity_with_polarity, self.threshold, self.within_instrument_matches)
         expected_matches = []
 
         for _, row in pd.DataFrame(expected_matches).iterrows():
