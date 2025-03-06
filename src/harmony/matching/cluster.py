@@ -85,7 +85,7 @@ def cluster_questions(questions: List[Question], num_clusters: int, is_show_grap
     elif algorithm == "deterministic":
         similarity_matrix = cosine_similarity(embedding_matrix)
 
-        clusters = find_clusters_deterministic(questions, similarity_matrix)
+        clusters = find_clusters_deterministic(questions, similarity_matrix, num_clusters)
 
         cluster_labels = []
         for question_idx in range(len(questions)):

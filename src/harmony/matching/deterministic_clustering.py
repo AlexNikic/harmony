@@ -27,6 +27,7 @@ from collections import Counter
 from typing import List
 
 import numpy as np
+import networkx as nx
 
 from harmony.schemas.requests.text import Question
 from harmony.schemas.responses.text import HarmonyCluster
@@ -78,7 +79,7 @@ def generate_semantic_keywords(cluster_items: List[Question], top_k: int = 5) ->
 
 
 def find_clusters_deterministic(
-    questions: List[Question], item_to_item_similarity_matrix: np.ndarray, threshold: float = 0.5
+    questions: List[Question], item_to_item_similarity_matrix: np.ndarray, num_clusters: int = 5
 ) -> List[HarmonyCluster]:
     """
     deterministic clustering using Sentence Transformers for cluster keywords.
@@ -89,8 +90,8 @@ def find_clusters_deterministic(
         The set of questions to cluster.
     item_to_item_similarity_matrix : np.ndarray
         The cosine similarity matrix for the questions.
-    threshold : float
-        Minimum similarity score required to cluster two items together.
+    num_clusters: int
+        The number of clusters to group the questions into.
 
     Returns
     -------
@@ -106,35 +107,30 @@ def find_clusters_deterministic(
     }
 
     total_score = Counter()
-    edges = set()
-    vertices = set()
 
+    # initialise the graph
+    graph = nx.Graph()
+    graph.add_nodes_from(range(item_to_item_similarity_matrix.shape[0]))
+
+    # loop through edges in descending order according to the edge's similarity
+    # add edges progressively until (at most) the number of connected components (num_clusters) is reached
     for (y, x), sim in sorted(coord_to_sim.items(), key=lambda x: x[1], reverse=True):
-        if x < y and sim >= threshold:
-            if x not in vertices or y not in vertices:
-                edges.add((x, y))
-                vertices.add(x)
-                vertices.add(y)
-                total_score[x] += sim
-                total_score[y] += sim
+        if x != y:
+            if nx.number_connected_components(graph) <= num_clusters:
+                break
 
+            graph.add_edge(y, x)
+            total_score[x] += sim
+            total_score[y] += sim
+
+    # create question to cluster lookup table
     question_idx_to_group_idx = {}
-    for x, y in edges:
-        if x not in question_idx_to_group_idx and y not in question_idx_to_group_idx:
-            group_idx = min(x, y)
-            question_idx_to_group_idx[x] = group_idx
-            question_idx_to_group_idx[y] = group_idx
-        elif x in question_idx_to_group_idx and y not in question_idx_to_group_idx:
-            group_idx = question_idx_to_group_idx[x]
-            question_idx_to_group_idx[y] = group_idx
-        elif y in question_idx_to_group_idx and x not in question_idx_to_group_idx:
-            group_idx = question_idx_to_group_idx[y]
-            question_idx_to_group_idx[x] = group_idx
-
-    for idx in range(len(questions)):
-        if idx not in question_idx_to_group_idx:
-            question_idx_to_group_idx[idx] = idx
-
+    group_idx = 0
+    for component in nx.connected_components(graph):
+        for idx in component:
+            question_idx_to_group_idx[idx] = group_idx
+        group_idx += 1
+        
     clusters_to_return = []
     all_groups = set(question_idx_to_group_idx.values())
     for group_no, group_idx in enumerate(sorted(all_groups)):
@@ -163,7 +159,7 @@ def find_clusters_deterministic(
             items=items,
             item_ids=item_ids,
             text_description=text_description,
-            keywords=cluster_keywords,
+            keywords=cluster_keywords
         )
         clusters_to_return.append(cluster)
 

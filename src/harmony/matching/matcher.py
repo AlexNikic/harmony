@@ -576,7 +576,8 @@ def match_instruments_with_function(
         mhc_all_metadatas: List = [],
         mhc_embeddings: np.ndarray = np.zeros((0, 0)),
         texts_cached_vectors: dict[str, List[float]] = {},
-        is_negate: bool = True
+        is_negate: bool = True,
+        num_clusters: int = 5
 ) -> MatchResult:
     """
     Match instruments.
@@ -588,6 +589,8 @@ def match_instruments_with_function(
     :param mhc_all_metadatas: MHC metadatas.
     :param mhc_embeddings: MHC embeddings.
     :param texts_cached_vectors: A dictionary of already cached vectors from texts (key is the text and value is the vector).
+    :param is_negate: Toggle question negation
+    :num_clusters: The number of clusters to group the questions into.
     """
 
     all_questions: List[Question] = []
@@ -675,7 +678,7 @@ def match_instruments_with_function(
 
     instrument_to_instrument_similarities = get_instrument_similarity(instruments, similarity_with_polarity)
 
-    clusters = find_clusters_deterministic(all_questions, similarity_with_polarity)
+    clusters = find_clusters_deterministic(all_questions, similarity_with_polarity, num_clusters)
 
     return MatchResult(questions=all_questions,
                        similarity_with_polarity=similarity_with_polarity,
